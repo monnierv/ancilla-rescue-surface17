@@ -1,7 +1,7 @@
 import unittest
 
 from surface17.node_map import build_code_graph
-from surface17.simulator import run_simulation, summarize
+from surface17.simulator import build_surface17_circuit, run_simulation, summarize
 
 
 class Surface17SimulatorTests(unittest.TestCase):
@@ -40,6 +40,22 @@ class Surface17SimulatorTests(unittest.TestCase):
             run_simulation(rounds=0)
         with self.assertRaises(ValueError):
             run_simulation(physical_error_rate=float("nan"))
+
+    def test_ancilla_flag_adds_reset_and_measurement_noise(self) -> None:
+        without_ancilla_errors = build_surface17_circuit(
+            rounds=2,
+            physical_error_rate=0.01,
+        )
+        with_ancilla_errors = build_surface17_circuit(
+            rounds=2,
+            physical_error_rate=0.01,
+            ancilla_errors=True,
+        )
+        count_x_errors = lambda circuit: sum(
+            instruction.name == "X_ERROR" for instruction in circuit.flattened()
+        )
+
+        self.assertGreater(count_x_errors(with_ancilla_errors), count_x_errors(without_ancilla_errors))
 
 
 if __name__ == "__main__":

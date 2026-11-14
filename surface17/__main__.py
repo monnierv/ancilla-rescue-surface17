@@ -10,6 +10,7 @@ def main() -> None:
     parser.add_argument("--rounds", type=int, default=3, help="number of syndrome measurement rounds")
     parser.add_argument("--p", type=float, default=0.001, help="physical error probability per modeled location")
     parser.add_argument("--seed", type=int, default=None, help="optional random seed")
+    parser.add_argument("--ancilla-errors", action="store_true", help="include syndrome-ancilla reset/readout errors")
     parser.add_argument("--plot", action="store_true", help="display the surface-17 node map")
     parser.add_argument("--save-map", metavar="PATH", help="save the node map image to PATH")
     arguments = parser.parse_args()
@@ -19,6 +20,7 @@ def main() -> None:
         rounds=arguments.rounds,
         physical_error_rate=arguments.p,
         seed=arguments.seed,
+        ancilla_errors=arguments.ancilla_errors,
     )
     summary = summarize(result)
 
@@ -26,6 +28,7 @@ def main() -> None:
     print(f"shots: {summary.shots}")
     print(f"syndrome rounds: {result.rounds}")
     print(f"physical error probability: {result.physical_error_rate:g}")
+    print(f"ancilla reset/readout errors: {'enabled' if arguments.ancilla_errors else 'disabled'}")
     print(f"detectors per shot: {summary.detector_count}")
     print(f"total detection events: {summary.total_detection_events}")
     print(f"shots with detections: {summary.shots_with_detections}")
