@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ancilla-rescue-surface17"
+version = "0.1.0"
+description = "A noisy surface-17 logical memory and syndrome-decoding simulator"
+requires-python = ">=3.10"
+dependencies = [
+    "matplotlib>=3.7",
+    "networkx>=3.0",
+    "numpy>=1.23",
+    "pymatching>=2.3",
+    "stim>=1.14",
+]
+
+[tool.setuptools.packages.find]
+include = ["surface17*"]
