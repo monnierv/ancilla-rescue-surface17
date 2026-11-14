@@ -33,6 +33,15 @@ python square8.py --shots 1000 --rounds 3 --p 0.001 --seed 7 --plot
 Use `--save-map square8.png` to save the node map without opening a plot window.
 Add `--ancilla-errors` to include explicit syndrome-ancilla reset and measurement bit-flip errors. The usual depolarizing noise on two-qubit data-ancilla gates remains controlled by `--p` either way.
 
+## Code Configuration
+
+The default layouts are defined in `surface17.json` and `square8.json`. Each file lists qubits with `id`, `kind`, and `x`/`y` coordinates, checks with an ancilla and X/Z basis, ancilla-to-data `connections`, and Z-basis `logical_observables`. Both programs validate that mixed X/Z checks commute before building the Stim circuit. Supply `--config PATH` to either command to run a different compatible layout.
+
+```bash
+python -m surface17 --config surface17.json
+python square8.py --config square8.json
+```
+
 Run the checks with:
 
 ```bash

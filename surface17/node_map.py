@@ -1,62 +1,27 @@
-import math
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import networkx as nx
-import stim
+
+from qec_config import build_code_graph as build_configured_graph
+from qec_config import load_code_config
 
 
-def build_code_graph() -> nx.Graph:
-    circuit = stim.Circuit.generated(
-        "surface_code:rotated_memory_z",
-        distance=3,
-        rounds=1,
-    )
-    coordinates = circuit.get_final_qubit_coordinates()
-    graph = nx.Graph()
-    positions = {}
-
-    data_qubits = []
-    check_qubits = []
-    for qubit, coordinate in coordinates.items():
-        x, y = coordinate[:2]
-        if int(x) % 2 == 1 and int(y) % 2 == 1:
-            data_qubits.append(qubit)
-        else:
-            check_qubits.append(qubit)
-
-    for index, qubit in enumerate(sorted(data_qubits), start=1):
-        node = ("data", qubit)
-        position = tuple(coordinates[qubit][:2])
-        graph.add_node(node, kind="data", label=f"D{index}", qubit=qubit, pos=position)
-        positions[node] = position
-
-    for index, qubit in enumerate(sorted(check_qubits), start=1):
-        node = ("check", qubit)
-        position = tuple(coordinates[qubit][:2])
-        graph.add_node(node, kind="check", label=f"S{index}", qubit=qubit, pos=position)
-        positions[node] = position
-
-    data_nodes = [node for node, attributes in graph.nodes(data=True) if attributes["kind"] == "data"]
-    check_nodes = [node for node, attributes in graph.nodes(data=True) if attributes["kind"] == "check"]
-    for data_node in data_nodes:
-        for check_node in check_nodes:
-            data_x, data_y = positions[data_node]
-            check_x, check_y = positions[check_node]
-            if math.isclose(abs(data_x - check_x), 1.0) and math.isclose(
-                abs(data_y - check_y),
-                1.0,
-            ):
-                graph.add_edge(data_node, check_node)
-
-    return graph
+def build_code_graph(config_path: str | Path | None = None) -> nx.Graph:
+    config = load_code_config(config_path, "surface17.json")
+    return build_configured_graph(config)
 
 
-def plot_code_map(output_path: str | None = None, show: bool = True) -> None:
-    graph = build_code_graph()
+def plot_code_map(
+    output_path: str | None = None,
+    show: bool = True,
+    config_path: str | Path | None = None,
+) -> None:
+    graph = build_code_graph(config_path)
     positions = nx.get_node_attributes(graph, "pos")
 
     data_nodes = [node for node, data in graph.nodes(data=True) if data["kind"] == "data"]
-    check_nodes = [node for node, data in graph.nodes(data=True) if data["kind"] == "check"]
+    check_nodes = [node for node, data in graph.nodes(data=True) if data["kind"] == "ancilla"]
     labels = nx.get_node_attributes(graph, "label")
 
     figure, axis = plt.subplots(figsize=(7, 6), facecolor="#f7f5ef")
@@ -83,7 +48,7 @@ def plot_code_map(output_path: str | None = None, show: bool = True) -> None:
         ax=axis,
     )
     nx.draw_networkx_labels(graph, positions, labels=labels, font_size=9, font_color="white", ax=axis)
-    axis.set_title("Surface-17 rotated code (distance 3)", fontsize=13, color="#263330")
+    axis.set_title(graph.graph["name"], fontsize=13, color="#263330")
     axis.set_aspect("equal")
     axis.axis("off")
     figure.tight_layout()

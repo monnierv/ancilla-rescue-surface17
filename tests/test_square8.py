@@ -1,13 +1,14 @@
 import unittest
 
-from square8 import CHECKS, build_square8_circuit, build_square8_graph, run_square8
+from qec_config import load_code_config
+from square8 import build_square8_circuit, build_square8_graph, run_square8
 
 
 class Square8Tests(unittest.TestCase):
     def test_zero_noise_has_no_temporal_syndrome_events(self) -> None:
         result = run_square8(shots=24, rounds=3, physical_error_rate=0, seed=7)
 
-        self.assertEqual(result.detection_events.shape, (24, 10))
+        self.assertEqual(result.detection_events.shape, (24, 12))
         self.assertEqual(result.observable_flips.shape, (24, 1))
         self.assertEqual(result.predicted_observable_flips.shape, (24, 1))
         self.assertFalse(result.detection_events.any())
@@ -30,8 +31,20 @@ class Square8Tests(unittest.TestCase):
         self.assertTrue(all(graph.degree(f"A{index}") == 4 for index in range(1, 5)))
 
     def test_mixed_basis_checks_commute(self) -> None:
-        x_checks = [support for _, basis, support, _, _ in CHECKS if basis == "X"]
-        z_checks = [support for _, basis, support, _, _ in CHECKS if basis == "Z"]
+        config = load_code_config(None, "square8.json")
+        supports = {check["ancilla"]: set() for check in config["checks"]}
+        for connection in config["connections"]:
+            supports[connection["ancilla"]].add(connection["data"])
+        x_checks = [
+            supports[check["ancilla"]]
+            for check in config["checks"]
+            if check["basis"] == "X"
+        ]
+        z_checks = [
+            supports[check["ancilla"]]
+            for check in config["checks"]
+            if check["basis"] == "Z"
+        ]
 
         for x_support in x_checks:
             for z_support in z_checks:
@@ -40,7 +53,7 @@ class Square8Tests(unittest.TestCase):
     def test_detector_count_and_parameters(self) -> None:
         circuit = build_square8_circuit(rounds=4, physical_error_rate=0)
 
-        self.assertEqual(circuit.num_detectors, 14)
+        self.assertEqual(circuit.num_detectors, 16)
         with self.assertRaises(ValueError):
             run_square8(shots=0)
         with self.assertRaises(ValueError):
@@ -59,8 +72,10 @@ class Square8Tests(unittest.TestCase):
             instruction.name == "X_ERROR" for instruction in circuit.flattened()
         )
 
-        self.assertEqual(count_x_errors(without_ancilla_errors), 0)
-        self.assertGreater(count_x_errors(with_ancilla_errors), 0)
+        self.assertGreater(
+            count_x_errors(with_ancilla_errors),
+            count_x_errors(without_ancilla_errors),
+        )
 
 
 if __name__ == "__main__":

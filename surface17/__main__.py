@@ -11,6 +11,7 @@ def main() -> None:
     parser.add_argument("--p", type=float, default=0.001, help="physical error probability per modeled location")
     parser.add_argument("--seed", type=int, default=None, help="optional random seed")
     parser.add_argument("--ancilla-errors", action="store_true", help="include syndrome-ancilla reset/readout errors")
+    parser.add_argument("--config", metavar="PATH", help="JSON code configuration (default: surface17.json)")
     parser.add_argument("--plot", action="store_true", help="display the surface-17 node map")
     parser.add_argument("--save-map", metavar="PATH", help="save the node map image to PATH")
     arguments = parser.parse_args()
@@ -21,6 +22,7 @@ def main() -> None:
         physical_error_rate=arguments.p,
         seed=arguments.seed,
         ancilla_errors=arguments.ancilla_errors,
+        config_path=arguments.config,
     )
     summary = summarize(result)
 
@@ -38,7 +40,7 @@ def main() -> None:
     print(f"decoded logical error rate: {summary.decoded_logical_error_rate:.6f}")
 
     if arguments.plot or arguments.save_map:
-        plot_code_map(output_path=arguments.save_map, show=arguments.plot)
+        plot_code_map(output_path=arguments.save_map, show=arguments.plot, config_path=arguments.config)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,32 @@
+{
+  "name": "Square-8 perimeter syndrome layout",
+  "qubits": [
+    {"id": "D1", "kind": "data", "x": -1, "y": 1},
+    {"id": "D2", "kind": "data", "x": 0, "y": 1},
+    {"id": "D3", "kind": "data", "x": 1, "y": 1},
+    {"id": "D4", "kind": "data", "x": 1, "y": 0},
+    {"id": "D5", "kind": "data", "x": 1, "y": -1},
+    {"id": "D6", "kind": "data", "x": 0, "y": -1},
+    {"id": "D7", "kind": "data", "x": -1, "y": -1},
+    {"id": "D8", "kind": "data", "x": -1, "y": 0},
+    {"id": "A1", "kind": "ancilla", "x": 0, "y": 2},
+    {"id": "A2", "kind": "ancilla", "x": 2, "y": 0},
+    {"id": "A3", "kind": "ancilla", "x": 0, "y": -2},
+    {"id": "A4", "kind": "ancilla", "x": -2, "y": 0}
+  ],
+  "checks": [
+    {"ancilla": "A1", "basis": "X"},
+    {"ancilla": "A2", "basis": "Z"},
+    {"ancilla": "A3", "basis": "X"},
+    {"ancilla": "A4", "basis": "Z"}
+  ],
+  "connections": [
+    {"ancilla": "A1", "data": "D1"}, {"ancilla": "A1", "data": "D2"}, {"ancilla": "A1", "data": "D3"}, {"ancilla": "A1", "data": "D4"},
+    {"ancilla": "A2", "data": "D3"}, {"ancilla": "A2", "data": "D4"}, {"ancilla": "A2", "data": "D5"}, {"ancilla": "A2", "data": "D6"},
+    {"ancilla": "A3", "data": "D5"}, {"ancilla": "A3", "data": "D6"}, {"ancilla": "A3", "data": "D7"}, {"ancilla": "A3", "data": "D8"},
+    {"ancilla": "A4", "data": "D7"}, {"ancilla": "A4", "data": "D8"}, {"ancilla": "A4", "data": "D1"}, {"ancilla": "A4", "data": "D2"}
+  ],
+  "logical_observables": [
+    {"id": "logical_z", "basis": "Z", "qubits": ["D1", "D3"]}
+  ]
+}

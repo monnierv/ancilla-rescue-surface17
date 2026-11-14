@@ -30,7 +30,7 @@ class Surface17SimulatorTests(unittest.TestCase):
 
         self.assertEqual(len(graph), 17)
         self.assertEqual(kinds.count("data"), 9)
-        self.assertEqual(kinds.count("check"), 8)
+        self.assertEqual(kinds.count("ancilla"), 8)
         self.assertGreater(graph.number_of_edges(), 0)
 
     def test_invalid_simulation_parameters_are_rejected(self) -> None:

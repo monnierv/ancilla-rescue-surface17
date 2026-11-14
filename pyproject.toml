@@ -15,5 +15,11 @@ dependencies = [
     "stim>=1.14",
 ]
 
+[tool.setuptools]
+py-modules = ["qec_config", "square8"]
+
 [tool.setuptools.packages.find]
 include = ["surface17*"]
+
+[tool.setuptools.data-files]
+"share/ancilla-rescue-surface17" = ["surface17.json", "square8.json"]
