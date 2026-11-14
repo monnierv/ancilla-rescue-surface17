@@ -16,10 +16,10 @@ dependencies = [
 ]
 
 [tool.setuptools]
-py-modules = ["qec_config", "square8"]
+py-modules = ["qec_config", "square8", "stress_test", "compare_codes"]
 
 [tool.setuptools.packages.find]
 include = ["surface17*"]
 
 [tool.setuptools.data-files]
-"share/ancilla-rescue-surface17" = ["surface17.json", "square8.json"]
+"share/ancilla-rescue-surface17" = ["surface17.json", "square8.json", "square8_plus.json"]

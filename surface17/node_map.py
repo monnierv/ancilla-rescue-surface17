@@ -26,7 +26,33 @@ def plot_code_map(
 
     figure, axis = plt.subplots(figsize=(7, 6), facecolor="#f7f5ef")
     axis.set_facecolor("#f7f5ef")
-    nx.draw_networkx_edges(graph, positions, ax=axis, edge_color="#aab3ae", width=1.5)
+    data_check_edges = [
+        (first, second)
+        for first, second, attributes in graph.edges(data=True)
+        if attributes.get("relation") != "ancilla_stabilizer"
+    ]
+    parity_edges = [
+        (first, second)
+        for first, second, attributes in graph.edges(data=True)
+        if attributes.get("relation") == "ancilla_stabilizer"
+    ]
+    nx.draw_networkx_edges(
+        graph,
+        positions,
+        edgelist=data_check_edges,
+        ax=axis,
+        edge_color="#aab3ae",
+        width=1.5,
+    )
+    nx.draw_networkx_edges(
+        graph,
+        positions,
+        edgelist=parity_edges,
+        ax=axis,
+        edge_color="#b88760",
+        style="dashed",
+        width=1.3,
+    )
     nx.draw_networkx_nodes(
         graph,
         positions,

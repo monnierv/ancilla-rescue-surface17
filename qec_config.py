@@ -94,6 +94,30 @@ def load_code_config(config_path: str | Path | None, default_filename: str) -> d
                 if len(overlap) % 2:
                     raise ValueError(f"X check {x_ancilla} and Z check {z_ancilla} do not commute")
 
+    ancilla_checks = config.get("ancilla_checks", [])
+    if not isinstance(ancilla_checks, list):
+        raise ValueError("ancilla_checks must be a list")
+    ancilla_check_by_measurement = {}
+    for check in ancilla_checks:
+        if not isinstance(check, dict):
+            raise ValueError("each ancilla check must be an object")
+        measurement_ancilla = check.get("ancilla")
+        if measurement_ancilla not in qubit_by_id or qubit_by_id[measurement_ancilla]["kind"] != "ancilla":
+            raise ValueError(f"ancilla check measurement qubit {measurement_ancilla!r} is not a configured ancilla")
+        if measurement_ancilla in check_by_ancilla or measurement_ancilla in ancilla_check_by_measurement:
+            raise ValueError(f"ancilla {measurement_ancilla} is assigned to multiple checks")
+        if check.get("basis") != "Y":
+            raise ValueError("ancilla-register diagnostic checks currently support basis 'Y'")
+        targets = check.get("qubits")
+        if not isinstance(targets, list) or not targets or len(set(targets)) != len(targets):
+            raise ValueError(f"ancilla check {measurement_ancilla} must list unique target qubits")
+        for target in targets:
+            if target not in qubit_by_id or qubit_by_id[target]["kind"] != "ancilla":
+                raise ValueError(f"ancilla check target {target!r} is not a configured ancilla")
+            if target == measurement_ancilla or target not in check_by_ancilla:
+                raise ValueError(f"ancilla check target {target!r} must be a different syndrome ancilla")
+        ancilla_check_by_measurement[measurement_ancilla] = check
+
     observables = config.get("logical_observables")
     if not isinstance(observables, list) or not observables:
         raise ValueError("configuration must contain at least one logical observable")
@@ -112,25 +136,34 @@ def load_code_config(config_path: str | Path | None, default_filename: str) -> d
     config["_qubit_by_id"] = qubit_by_id
     config["_check_by_ancilla"] = check_by_ancilla
     config["_support_by_ancilla"] = support_by_ancilla
+    config["ancilla_checks"] = ancilla_checks
+    config["_ancilla_check_by_measurement"] = ancilla_check_by_measurement
     return config
 
 
 def build_code_graph(config: dict[str, Any]) -> nx.Graph:
     graph = nx.Graph(name=config["name"])
     check_by_ancilla = config["_check_by_ancilla"]
+    ancilla_check_by_measurement = config["_ancilla_check_by_measurement"]
     for qubit in config["qubits"]:
         qubit_id = qubit["id"]
         check = check_by_ancilla.get(qubit_id)
-        label = f"{qubit_id} ({check['basis']})" if check else qubit_id
+        check_basis = check["basis"] if check else None
+        if qubit_id in ancilla_check_by_measurement:
+            check_basis = ancilla_check_by_measurement[qubit_id]["basis"]
+        label = f"{qubit_id} ({check_basis} check)" if check_basis else qubit_id
         graph.add_node(
             qubit_id,
             kind=qubit["kind"],
             label=label,
             pos=(qubit["x"], qubit["y"]),
-            basis=check["basis"] if check else None,
+            basis=check_basis,
         )
     for connection in config["connections"]:
         graph.add_edge(connection["ancilla"], connection["data"])
+    for check in config["ancilla_checks"]:
+        for target in check["qubits"]:
+            graph.add_edge(check["ancilla"], target, relation="ancilla_stabilizer")
     return graph
 
 
@@ -139,6 +172,7 @@ def build_memory_circuit(
     rounds: int,
     physical_error_rate: float,
     ancilla_errors: bool = False,
+    forced_fault: tuple[str, str] | None = None,
 ) -> stim.Circuit:
     if rounds <= 0:
         raise ValueError("rounds must be greater than zero")
@@ -147,8 +181,20 @@ def build_memory_circuit(
 
     qubits = config["qubits"]
     qubit_index = {qubit["id"]: index for index, qubit in enumerate(qubits)}
+    if forced_fault is not None:
+        fault_qubit_id, fault_pauli = forced_fault
+        if fault_qubit_id not in qubit_index:
+            raise ValueError(f"forced fault references unknown qubit {fault_qubit_id!r}")
+        if fault_pauli not in {"X", "Z"}:
+            raise ValueError("forced fault Pauli must be 'X' or 'Z'")
+        fault_target = qubit_index[fault_qubit_id]
+        fault_kind = config["_qubit_by_id"][fault_qubit_id]["kind"]
+    else:
+        fault_qubit_id = None
+        fault_target = None
+        fault_kind = None
     data_ids = [qubit["id"] for qubit in qubits if qubit["kind"] == "data"]
-    ancilla_ids = [qubit["id"] for qubit in qubits if qubit["kind"] == "ancilla"]
+    ancilla_ids = [check["ancilla"] for check in config["checks"]]
     data_targets = [qubit_index[qubit_id] for qubit_id in data_ids]
     ancilla_targets = [qubit_index[qubit_id] for qubit_id in ancilla_ids]
     checks = config["checks"]
@@ -161,6 +207,8 @@ def build_memory_circuit(
     circuit.append("R", data_targets)
     if physical_error_rate:
         circuit.append("X_ERROR", data_targets, physical_error_rate)
+    if forced_fault is not None and fault_kind == "data":
+        circuit.append(f"{fault_pauli}_ERROR", [fault_target], 1)
 
     for round_index in range(rounds):
         circuit.append("R", ancilla_targets)
@@ -170,6 +218,13 @@ def build_memory_circuit(
                 circuit.append("X_ERROR", ancilla_targets, physical_error_rate)
             if x_ancilla_targets:
                 circuit.append("DEPOLARIZE1", x_ancilla_targets, physical_error_rate)
+        if (
+            forced_fault is not None
+            and fault_kind == "ancilla"
+            and fault_qubit_id in ancilla_ids
+            and round_index == 0
+        ):
+            circuit.append(f"{fault_pauli}_ERROR", [fault_target], 1)
         if x_ancilla_targets:
             circuit.append("H", x_ancilla_targets)
 
@@ -235,5 +290,42 @@ def build_memory_circuit(
             for data_id in observable["qubits"]
         ]
         circuit.append("OBSERVABLE_INCLUDE", targets, observable_index)
+
+    for ancilla_check in config["ancilla_checks"]:
+        target_ids = ancilla_check["qubits"]
+        target_indices = [qubit_index[qubit_id] for qubit_id in target_ids]
+        measurement_index = qubit_index[ancilla_check["ancilla"]]
+        circuit.append("R", target_indices + [measurement_index])
+        if ancilla_errors and physical_error_rate:
+            circuit.append("X_ERROR", target_indices + [measurement_index], physical_error_rate)
+        circuit.append("H", target_indices)
+        circuit.append("S", target_indices)
+        if physical_error_rate:
+            circuit.append("DEPOLARIZE1", target_indices, physical_error_rate)
+        if (
+            forced_fault is not None
+            and fault_kind == "ancilla"
+            and fault_qubit_id == ancilla_check["ancilla"]
+        ):
+            circuit.append(f"{fault_pauli}_ERROR", [measurement_index], 1)
+        for target_index in target_indices:
+            circuit.append("S_DAG", [target_index])
+            circuit.append("H", [target_index])
+            circuit.append("CX", [target_index, measurement_index])
+            if physical_error_rate:
+                circuit.append("DEPOLARIZE1", [target_index], physical_error_rate)
+                circuit.append("DEPOLARIZE2", [target_index, measurement_index], physical_error_rate)
+        if ancilla_errors and physical_error_rate:
+            circuit.append("X_ERROR", [measurement_index], physical_error_rate)
+        circuit.append("M", [measurement_index])
+        circuit.append(
+            "DETECTOR",
+            [stim.target_rec(-1)],
+            [
+                config["_qubit_by_id"][ancilla_check["ancilla"]]["x"],
+                config["_qubit_by_id"][ancilla_check["ancilla"]]["y"],
+                rounds + 1,
+            ],
+        )
 
     return circuit

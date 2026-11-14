@@ -71,9 +71,10 @@ def build_surface17_circuit(
     physical_error_rate: float = 0.001,
     ancilla_errors: bool = False,
     config_path: str | Path | None = None,
+    forced_fault: tuple[str, str] | None = None,
 ) -> stim.Circuit:
     config = load_code_config(config_path, "surface17.json")
-    return build_memory_circuit(config, rounds, physical_error_rate, ancilla_errors)
+    return build_memory_circuit(config, rounds, physical_error_rate, ancilla_errors, forced_fault)
 
 
 def summarize(result: SimulationResult) -> SyndromeSummary:

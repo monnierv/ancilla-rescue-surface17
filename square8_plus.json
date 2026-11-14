@@ -1,0 +1,48 @@
+{
+  "name": "Square-8 Plus",
+  "qubits": [
+    {"id": "D1", "kind": "data", "x": -1, "y": 1},
+    {"id": "D2", "kind": "data", "x": 0, "y": 1},
+    {"id": "D3", "kind": "data", "x": 1, "y": 1},
+    {"id": "D4", "kind": "data", "x": 1, "y": 0},
+    {"id": "D5", "kind": "data", "x": 1, "y": -1},
+    {"id": "D6", "kind": "data", "x": 0, "y": -1},
+    {"id": "D7", "kind": "data", "x": -1, "y": -1},
+    {"id": "D8", "kind": "data", "x": -1, "y": 0},
+    {"id": "A1", "kind": "ancilla", "x": -0.5, "y": 1.65},
+    {"id": "A2", "kind": "ancilla", "x": 1.65, "y": 0.5},
+    {"id": "A3", "kind": "ancilla", "x": 0.5, "y": -1.65},
+    {"id": "A4", "kind": "ancilla", "x": -1.65, "y": -0.5},
+    {"id": "A5", "kind": "ancilla", "x": 1.65, "y": 1.65},
+    {"id": "A6", "kind": "ancilla", "x": 1.65, "y": -1.65},
+    {"id": "A7", "kind": "ancilla", "x": -1.65, "y": -1.65},
+    {"id": "A8", "kind": "ancilla", "x": -1.65, "y": 1.65},
+    {"id": "A9", "kind": "ancilla", "x": 0, "y": 0}
+  ],
+  "checks": [
+    {"ancilla": "A1", "basis": "X"},
+    {"ancilla": "A2", "basis": "X"},
+    {"ancilla": "A3", "basis": "X"},
+    {"ancilla": "A4", "basis": "X"},
+    {"ancilla": "A5", "basis": "Z"},
+    {"ancilla": "A6", "basis": "Z"},
+    {"ancilla": "A7", "basis": "Z"},
+    {"ancilla": "A8", "basis": "Z"}
+  ],
+  "connections": [
+    {"ancilla": "A1", "data": "D1"}, {"ancilla": "A1", "data": "D2"},
+    {"ancilla": "A2", "data": "D3"}, {"ancilla": "A2", "data": "D4"},
+    {"ancilla": "A3", "data": "D5"}, {"ancilla": "A3", "data": "D6"},
+    {"ancilla": "A4", "data": "D7"}, {"ancilla": "A4", "data": "D8"},
+    {"ancilla": "A5", "data": "D1"}, {"ancilla": "A5", "data": "D2"}, {"ancilla": "A5", "data": "D3"}, {"ancilla": "A5", "data": "D4"},
+    {"ancilla": "A6", "data": "D3"}, {"ancilla": "A6", "data": "D4"}, {"ancilla": "A6", "data": "D5"}, {"ancilla": "A6", "data": "D6"},
+    {"ancilla": "A7", "data": "D5"}, {"ancilla": "A7", "data": "D6"}, {"ancilla": "A7", "data": "D7"}, {"ancilla": "A7", "data": "D8"},
+    {"ancilla": "A8", "data": "D7"}, {"ancilla": "A8", "data": "D8"}, {"ancilla": "A8", "data": "D1"}, {"ancilla": "A8", "data": "D2"}
+  ],
+  "ancilla_checks": [
+    {"ancilla": "A9", "basis": "Y", "qubits": ["A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8"]}
+  ],
+  "logical_observables": [
+    {"id": "logical_z", "basis": "Z", "qubits": ["D1", "D2"]}
+  ]
+}

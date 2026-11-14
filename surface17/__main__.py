@@ -2,6 +2,7 @@ import argparse
 
 from .node_map import plot_code_map
 from .simulator import run_simulation, summarize
+from stress_test import plot_stress_test, print_stress_summary, run_stress_test
 
 
 def main() -> None:
@@ -12,9 +13,31 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=None, help="optional random seed")
     parser.add_argument("--ancilla-errors", action="store_true", help="include syndrome-ancilla reset/readout errors")
     parser.add_argument("--config", metavar="PATH", help="JSON code configuration (default: surface17.json)")
+    parser.add_argument("--stress-test", action="store_true", help="run forced X/Z fault tests on every configured node")
+    parser.add_argument("--stress-trials", type=int, default=1000, help="trials per node and Pauli in stress-test mode")
     parser.add_argument("--plot", action="store_true", help="display the surface-17 node map")
     parser.add_argument("--save-map", metavar="PATH", help="save the node map image to PATH")
     arguments = parser.parse_args()
+
+    if arguments.stress_test:
+        stress_result = run_stress_test(
+            config_path=arguments.config,
+            default_config="surface17.json",
+            trials=arguments.stress_trials,
+            rounds=arguments.rounds,
+            physical_error_rate=arguments.p,
+            ancilla_errors=arguments.ancilla_errors,
+            seed=arguments.seed,
+        )
+        print_stress_summary(stress_result)
+        plot_stress_test(
+            stress_result,
+            config_path=arguments.config,
+            default_config="surface17.json",
+            output_path=arguments.save_map,
+            show=arguments.plot or not arguments.save_map,
+        )
+        return
 
     result = run_simulation(
         shots=arguments.shots,

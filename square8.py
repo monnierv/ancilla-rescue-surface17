@@ -12,6 +12,7 @@ import stim
 
 from qec_config import build_code_graph as build_configured_graph
 from qec_config import build_memory_circuit, load_code_config
+from stress_test import plot_stress_test, print_stress_summary, run_stress_test
 
 
 @dataclass(frozen=True)
@@ -83,7 +84,33 @@ def plot_square8_map(
 
     figure, axis = plt.subplots(figsize=(7, 7), facecolor="#f7f5ef")
     axis.set_facecolor("#f7f5ef")
-    nx.draw_networkx_edges(graph, positions, ax=axis, edge_color="#aab3ae", width=1.5)
+    data_check_edges = [
+        (first, second)
+        for first, second, attributes in graph.edges(data=True)
+        if attributes.get("relation") != "ancilla_stabilizer"
+    ]
+    parity_edges = [
+        (first, second)
+        for first, second, attributes in graph.edges(data=True)
+        if attributes.get("relation") == "ancilla_stabilizer"
+    ]
+    nx.draw_networkx_edges(
+        graph,
+        positions,
+        edgelist=data_check_edges,
+        ax=axis,
+        edge_color="#aab3ae",
+        width=1.5,
+    )
+    nx.draw_networkx_edges(
+        graph,
+        positions,
+        edgelist=parity_edges,
+        ax=axis,
+        edge_color="#b88760",
+        style="dashed",
+        width=1.3,
+    )
     nx.draw_networkx_nodes(
         graph,
         positions,
@@ -126,11 +153,33 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--ancilla-errors", action="store_true", help="include syndrome-ancilla reset/readout errors")
     parser.add_argument("--config", metavar="PATH", help="JSON code configuration (default: square8.json)")
+    parser.add_argument("--stress-test", action="store_true", help="run forced X/Z fault tests on every configured node")
+    parser.add_argument("--stress-trials", type=int, default=1000, help="trials per node and Pauli in stress-test mode")
     parser.add_argument("--plot", action="store_true", help="display the square node map")
     parser.add_argument("--save-map", metavar="PATH", help="save the square node map")
     arguments = parser.parse_args()
 
     config = load_code_config(arguments.config, "square8.json")
+    if arguments.stress_test:
+        stress_result = run_stress_test(
+            config_path=arguments.config,
+            default_config="square8.json",
+            trials=arguments.stress_trials,
+            rounds=arguments.rounds,
+            physical_error_rate=arguments.p,
+            ancilla_errors=arguments.ancilla_errors,
+            seed=arguments.seed,
+        )
+        print_stress_summary(stress_result)
+        plot_stress_test(
+            stress_result,
+            config_path=arguments.config,
+            default_config="square8.json",
+            output_path=arguments.save_map,
+            show=arguments.plot or not arguments.save_map,
+        )
+        return
+
     result = run_square8(
         shots=arguments.shots,
         rounds=arguments.rounds,
